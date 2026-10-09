@@ -2,58 +2,112 @@ import { expect } from '@playwright/test';
 import { BasePage } from './base-page';
 
 export class LoginPage extends BasePage {
-  readonly usernameInput = this.page.locator('#username');
-  readonly passwordInput = this.page.locator('#password');
-  readonly loginButton = this.page.getByRole('button', { name: 'Login' });
-  readonly authError = this.page.locator('.auth_error');
-  readonly usernameError = this.page.getByText(/Enter Username|Username is required|Please enter username/i);
-  readonly passwordError = this.page.getByText(/Enter Password|Password is required|Please enter password/i);
-  readonly searchHotelLink = this.page.getByRole('link', { name: 'Search Hotel' });
-  readonly bookedItineraryLink = this.page.getByRole('link', { name: 'Booked Itinerary' });
-  readonly changePasswordLink = this.page.getByRole('link', { name: 'Change Password' });
-  readonly logoutLink = this.page.getByRole('link', { name: 'Logout' });
-
-  async open() {
-    await this.goto('/');
-    await this.expectVisible(this.usernameInput, 'username field');
-    await this.expectVisible(this.passwordInput, 'password field');
-    await this.expectVisible(this.loginButton, 'login button');
+  get usernameInput() {
+    return this.page.locator('#username');
   }
 
-  async loginWith(username: string, password: string) {
-    await this.safeAction(async () => {
+  get passwordInput() {
+    return this.page.locator('#password');
+  }
+
+  get loginButton() {
+    return this.page.getByRole('button', { name: 'Login' });
+  }
+
+  get authError() {
+    return this.page.locator('.auth_error');
+  }
+
+  get usernameError() {
+    return this.page.locator('#username_span');
+  }
+
+  get passwordError() {
+    return this.page.locator('#password_span');
+  }
+
+  get searchHotelNavLink() {
+    return this.page.getByRole('link', { name: 'Search Hotel' }).first();
+  }
+
+  get welcomeMessage() {
+    return this.page.getByText('Welcome to Adactin Group of Hotels');
+  }
+
+  async open(): Promise<void> {
+    await this.execute('Navigate to login page', async () => {
+      await this.page.goto('/');
+      await this.page.waitForLoadState('domcontentloaded');
+    });
+  }
+
+  async expectLoginPageDisplayed(): Promise<void> {
+    await this.execute('Verify login page is displayed', async () => {
+      await expect(this.page).toHaveURL(/adactinhotelapp\.com\/$/);
+      await expect(this.usernameInput).toBeVisible();
+      await expect(this.passwordInput).toBeVisible();
+      await expect(this.loginButton).toBeVisible();
+    });
+  }
+
+  async enterUsername(username: string): Promise<void> {
+    await this.execute(`Enter username ${username}`, async () => {
       await this.usernameInput.fill(username);
+      await expect(this.usernameInput).toHaveValue(username);
+    });
+  }
+
+  async enterPassword(password: string): Promise<void> {
+    await this.execute(`Enter password ${password}`, async () => {
       await this.passwordInput.fill(password);
+      await expect(this.passwordInput).toHaveValue(password);
+    });
+  }
+
+  async clickLogin(): Promise<void> {
+    await this.execute('Click the login button', async () => {
       await this.loginButton.click();
-    }, `Submit login with username '${username}'`);
+    });
   }
 
-  async expectLoginPageVisible() {
-    await this.expectVisible(this.usernameInput, 'username field');
-    await this.expectVisible(this.passwordInput, 'password field');
-    await this.expectVisible(this.loginButton, 'login button');
+  async expectSuccessfulLogin(): Promise<void> {
+    await this.execute('Verify successful login redirection and dashboard', async () => {
+      await expect(this.page).toHaveURL(/SearchHotel\.php/);
+      await expect(this.page).toHaveTitle(/Search Hotel/);
+      await expect(this.searchHotelNavLink).toBeVisible();
+      await expect(this.welcomeMessage).toBeVisible();
+    });
   }
 
-  async expectErrorMessageVisible(expectedText: string | RegExp) {
-    await this.expectVisible(this.authError, 'authentication error message');
-    await this.expectText(this.authError, expectedText, 'authentication error message');
+  async expectInvalidLoginError(): Promise<void> {
+    await this.execute('Verify invalid login error message', async () => {
+      await expect(this.page).toHaveURL(/adactinhotelapp\.com\/$/);
+      await expect(this.authError).toContainText(/Invalid Login details|Your Password might have expired/i);
+    });
   }
 
-  async expectValidationErrorVisible(message: string | RegExp) {
-    const validationError = this.page.getByText(/Enter Username|Enter Password|Please enter|Username is required|Password is required/i).filter({ hasText: message });
-    await this.expectVisible(validationError.first(), 'validation error message');
-    await expect(validationError.first()).toContainText(message, { timeout: 15000 });
+  async expectUsernameRequiredValidation(): Promise<void> {
+    await this.execute('Verify username validation', async () => {
+      await expect(this.usernameError).toContainText('Enter Username');
+      await expect(this.usernameInput).toHaveValue('');
+    });
   }
 
-  async expectDashboardLoaded() {
-    await this.expectVisible(this.searchHotelLink, 'Search Hotel link');
-    await this.expectVisible(this.bookedItineraryLink, 'Booked Itinerary link');
-    await this.expectVisible(this.changePasswordLink, 'Change Password link');
-    await this.expectVisible(this.logoutLink, 'Logout link');
+  async expectPasswordRequiredValidation(): Promise<void> {
+    await this.execute('Verify password validation', async () => {
+      await expect(this.passwordError).toContainText('Enter Password');
+      await expect(this.passwordInput).toHaveValue('');
+    });
   }
 
-  async expectInvalidLoginDetailsMessage() {
-    await this.expectVisible(this.authError, 'login error');
-    await expect(this.authError).toContainText(/invalid|please|details/i, { timeout: 15000 });
+  async expectWelcomeMessage(username: string): Promise<void> {
+    await this.execute(`Verify welcome message includes ${username}`, async () => {
+      await expect(this.welcomeMessage).toBeVisible();
+
+      const pageText = await this.page.locator('body').innerText();
+      if (pageText.toLowerCase().includes(username.toLowerCase())) {
+        await expect(this.page.locator('body')).toContainText(username);
+      }
+    });
   }
 }

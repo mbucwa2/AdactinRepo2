@@ -25,3 +25,5 @@ results/
 # Local editor/system noise
 .DS_Store
 .env
+
+.env
