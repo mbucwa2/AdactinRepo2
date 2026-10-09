@@ -58,19 +58,58 @@ jobs:
           XRAY_CLIENT_ID: ${{ secrets.XRAY_CLIENT_ID }}
           XRAY_CLIENT_SECRET: ${{ secrets.XRAY_CLIENT_SECRET }}
         run: |
-          # Determine if both Xray secrets are available and expose as output
-          if [ -z "${XRAY_CLIENT_ID}" ] || [ -z "${XRAY_CLIENT_SECRET}" ]; then
-            echo "has_xray=false" >> $GITHUB_OUTPUT
-            echo "Skipping Xray import: XRAY_CLIENT_ID or XRAY_CLIENT_SECRET is missing"
+          set -euo pipefail
+          HAS_XRAY=false
+
+          if [ -n "${XRAY_CLIENT_ID:-}" ] && [ -n "${XRAY_CLIENT_SECRET:-}" ]; then
+            HAS_XRAY=true
+            echo "Found Xray credentials in repository secrets"
           else
-            echo "has_xray=true" >> $GITHUB_OUTPUT
+            echo "Repository secrets missing — attempting fallbacks (.env, .vscode/mcp.json)"
+
+            if [ -f .env ]; then
+              CID=$(grep -E '^XRAY_CLIENT_ID' .env | sed 's/.*=//' | tr -d ' "') || true
+              CSEC=$(grep -E '^XRAY_CLIENT_SECRET' .env | sed 's/.*=//' | tr -d ' "') || true
+              if [ -n "$CID" ] && [ -n "$CSEC" ]; then
+                echo "XRAY_CLIENT_ID=$CID" >> $GITHUB_ENV
+                echo "XRAY_CLIENT_SECRET=$CSEC" >> $GITHUB_ENV
+                XRAY_CLIENT_ID=$CID
+                XRAY_CLIENT_SECRET=$CSEC
+                HAS_XRAY=true
+                echo "Using Xray credentials from .env"
+              fi
+            fi
+
+            if [ "$HAS_XRAY" != "true" ] && [ -f .vscode/mcp.json ]; then
+              if command -v jq >/dev/null 2>&1; then
+                CID=$(jq -r '.xray.XRAY_CLIENT_ID // empty' .vscode/mcp.json) || true
+                CSEC=$(jq -r '.xray.XRAY_CLIENT_SECRET // empty' .vscode/mcp.json) || true
+              else
+                CID=$(grep -o '"XRAY_CLIENT_ID"[[:space:]]*:[[:space:]]*"[^"]\+' .vscode/mcp.json | head -1 | sed 's/.*: *"//' || true
+                CSEC=$(grep -o '"XRAY_CLIENT_SECRET"[[:space:]]*:[[:space:]]*"[^"]\+' .vscode/mcp.json | head -1 | sed 's/.*: *"//' || true
+              fi
+              if [ -n "$CID" ] && [ -n "$CSEC" ]; then
+                echo "XRAY_CLIENT_ID=$CID" >> $GITHUB_ENV
+                echo "XRAY_CLIENT_SECRET=$CSEC" >> $GITHUB_ENV
+                XRAY_CLIENT_ID=$CID
+                XRAY_CLIENT_SECRET=$CSEC
+                HAS_XRAY=true
+                echo "Using Xray credentials from .vscode/mcp.json"
+              fi
+            fi
           fi
+
+          if [ "$HAS_XRAY" != "true" ]; then
+            echo "Error: XRAY_CLIENT_ID and XRAY_CLIENT_SECRET must be provided via repository secrets or fallback files (.env or .vscode/mcp.json)" >&2
+            echo "has_xray=false" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+
+          echo "has_xray=true" >> $GITHUB_OUTPUT
 
       - name: Import results into existing Xray execution
         if: steps.check-xray.outputs.has_xray == 'true'
         env:
-          XRAY_CLIENT_ID: ${{ secrets.XRAY_CLIENT_ID }}
-          XRAY_CLIENT_SECRET: ${{ secrets.XRAY_CLIENT_SECRET }}
           TEST_EXEC_KEY: ${{ inputs.test_exec_key }}
         run: |
           set -euo pipefail

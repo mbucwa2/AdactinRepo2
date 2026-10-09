@@ -1,181 +1,121 @@
-# Test Cases - Login to Adactin Hotel App (ILABACCEL-1576)
+# Xray Export: ILABACCEL-1586
+
+Exported 6 tests from the test plan `ILABACCEL-1586`.
+
+## ILABACCEL-1580 — Login successful with valid credentials
+
+- Key: `ILABACCEL-1580`
+- Summary: Login successful with valid credentials
+- Priority: High
+- Preconditions:
+  - User has access to the application login page
+  - Test user is active
+  - Use credentials username `AutotestB` and password `IA4073`
+
+- Steps:
+  1. Action: Open the application login page.
+     Expected result: The login page is displayed and ready for authentication.
+  2. Action: Enter username `AutotestB` in the username field.
+     Expected result: The username is accepted and appears in the username field.
+  3. Action: Enter password `IA4073` in the password field.
+     Expected result: The password is accepted and masked/entered without error.
+  4. Action: Click the Login button.
+     Expected result: The user is authenticated successfully, no error message is displayed, and the user is redirected away from the login page.
+
+## ILABACCEL-1581 — Login fails with invalid username
+
+- Key: `ILABACCEL-1581`
+- Summary: Login fails with invalid username
+- Priority: High
+- Preconditions:
+  - User has access to the application login page
+  - Use a non-existent username and a valid password
+
+- Steps:
+  1. Action: Open the application login page.
+     Expected result: The login page is displayed and ready for authentication.
+  2. Action: Enter username `InvalidUser` in the username field.
+     Expected result: The invalid username is entered and visible in the field.
+  3. Action: Enter password `IA4073` in the password field.
+     Expected result: The valid password is accepted and entered without error.
+  4. Action: Click the Login button.
+     Expected result: Login is rejected, the user remains on the login page, and an appropriate error message is displayed.
+
+## ILABACCEL-1582 — Login fails with invalid password
+
+- Key: `ILABACCEL-1582`
+- Summary: Login fails with invalid password
+- Priority: High
+- Preconditions:
+  - User has access to the application login page
+  - Use a valid username and an invalid password
+
+- Steps:
+  1. Action: Open the application login page.
+     Expected result: The login page is displayed and ready for authentication.
+  2. Action: Enter username `AutotestB` in the username field.
+     Expected result: The valid username is entered and visible in the field.
+  3. Action: Enter password `WrongPass1` in the password field.
+     Expected result: The invalid password is entered and accepted by the form.
+  4. Action: Click the Login button.
+     Expected result: Login is rejected, the user remains on the login page, and an appropriate error message is displayed.
+
+## ILABACCEL-1583 — Login validation for empty username or password
+
+- Key: `ILABACCEL-1583`
+- Summary: Login validation for empty username or password
+- Priority: Medium
+- Preconditions:
+  - User has access to the application login page
+
+- Steps:
+  1. Action: Open the application login page.
+     Expected result: The login page is displayed and ready for input.
+  2. Action: Leave the username empty, enter password `IA4073`, and click the Login button.
+     Expected result: Login is not attempted or is rejected, the user remains on the login page, and a validation message appears for the missing username.
+  3. Action: Leave the password empty, enter username `AutotestB`, and click the Login button.
+     Expected result: Login is not attempted or is rejected, the user remains on the login page, and a validation message appears for the missing password.
+  4. Action: Leave both the username and password empty and click the Login button.
+     Expected result: Login is not attempted or is rejected, the user remains on the login page, and required-field validation messages are displayed for missing input.
+
+## ILABACCEL-1584 — User lands on correct dashboard after login
+
+- Key: `ILABACCEL-1584`
+- Summary: User lands on correct dashboard after login
+- Priority: High
+- Preconditions:
+  - User has access to the application login page
+  - Use credentials username `AutotestB` and password `IA4073`
+
+- Steps:
+  1. Action: Open the application login page.
+     Expected result: The login page is displayed and ready for authentication.
+  2. Action: Enter username `AutotestB`.
+     Expected result: The username is accepted and visible in the field.
+  3. Action: Enter password `IA4073`.
+     Expected result: The password is accepted and masked/entered without error.
+  4. Action: Click the Login button.
+     Expected result: The authentication request is processed successfully.
+  5. Action: Observe the page displayed after authentication.
+     Expected result: The user is redirected to the expected dashboard page, the dashboard title and key widgets are visible, and the logged-in user identity is shown in the UI where applicable.
+
+## ILABACCEL-1585 — Error message displayed on failed login
+
+- Key: `ILABACCEL-1585`
+- Summary: Error message displayed on failed login
+- Priority: Medium
+- Preconditions:
+  - User has access to the application login page
+
+- Steps:
+  1. Action: Open the application login page.
+     Expected result: The login page is displayed and ready for input.
+  2. Action: Enter username `AutotestB`.
+     Expected result: The username is accepted and visible in the field.
+  3. Action: Enter password `WrongPass1`.
+     Expected result: The invalid password is accepted and entered without error.
+  4. Action: Click the Login button.
+     Expected result: Authentication is attempted and fails.
+  5. Action: Capture the error message text and where it appears.
+     Expected result: A clear error message is displayed indicating authentication failed, the message is user-friendly and does not expose sensitive information, and the user remains on the login page and can retry.
 
-## Test 1: ILABACCEL-1570 - Successful login with valid username and password
-
-**Priority:** Medium
-
-**Preconditions:**
-- User has a registered account on Adactin Hotel App
-- Test user credentials are available
-- Browser is open
-
-**Test Data:**
-- Username: AutotestB
-- Password: IA4073
-
-**Test Steps:**
-
-1. **Action:** Navigate to the Adactin Hotel App login page  
-   **Expected Result:** The Login page is displayed
-
-2. **Action:** In the Username field, enter AutotestB  
-   **Expected Result:** Username is entered in the field
-
-3. **Action:** In the Password field, enter IA4073  
-   **Expected Result:** Password is entered in the field
-
-4. **Action:** Click the Login button  
-   **Expected Result:** The user is authenticated successfully
-
-5. **Action:** Verify application behavior after login  
-   **Expected Result:** The application redirects to the Search Hotel dashboard page (SearchHotel.php) and a welcome message is visible including the username AutotestB
-
----
-
-## Test 2: ILABACCEL-1571 - Login attempt with invalid username
-
-**Priority:** Medium
-
-**Preconditions:**
-- Browser is open
-
-**Test Data:**
-- Username: InvalidUser123
-- Password: IA4073
-
-**Test Steps:**
-
-1. **Action:** Navigate to the Adactin Hotel App login page  
-   **Expected Result:** The Login page is displayed
-
-2. **Action:** In the Username field, enter InvalidUser123  
-   **Expected Result:** Username is entered in the field
-
-3. **Action:** In the Password field, enter IA4073  
-   **Expected Result:** Password is entered in the field
-
-4. **Action:** Click the Login button  
-   **Expected Result:** Login fails, user remains on the Login page, and an appropriate error message is displayed (e.g., "Invalid Login details" or "Your Password might have expired. Click here to reset your password")
-
----
-
-## Test 3: ILABACCEL-1572 - Login attempt with invalid password
-
-**Priority:** Medium
-
-**Preconditions:**
-- User has a registered account on Adactin Hotel App
-- Browser is open
-
-**Test Data:**
-- Username: AutotestB
-- Password: WrongPass1
-
-**Test Steps:**
-
-1. **Action:** Navigate to the Adactin Hotel App login page  
-   **Expected Result:** The Login page is displayed
-
-2. **Action:** In the Username field, enter AutotestB  
-   **Expected Result:** Username is entered in the field
-
-3. **Action:** In the Password field, enter WrongPass1  
-   **Expected Result:** Password is entered in the field
-
-4. **Action:** Click the Login button  
-   **Expected Result:** Login fails, user remains on the Login page, and an appropriate error message is displayed (e.g., "Invalid Login details" or "Your Password might have expired. Click here to reset your password")
-
----
-
-## Test 4: ILABACCEL-1573 - Login attempt with empty username and password
-
-**Priority:** Medium
-
-**Preconditions:**
-- Browser is open
-
-**Test Steps:**
-
-1. **Action:** Navigate to the Adactin Hotel App login page  
-   **Expected Result:** The Login page is displayed
-
-2. **Action:** Leave the Username field empty  
-   **Expected Result:** Username field remains empty
-
-3. **Action:** Leave the Password field empty  
-   **Expected Result:** Password field remains empty
-
-4. **Action:** Click the Login button  
-   **Expected Result:** Login attempt is prevented, validation messages are displayed prompting the user to enter username and password, and user remains on the Login page
-
----
-
-## Test 5: ILABACCEL-1574 - Landing page verification after successful login
-
-**Priority:** Medium
-
-**Preconditions:**
-- User has a registered account on Adactin Hotel App
-- Browser is open
-
-**Test Data:**
-- Username: AutotestB
-- Password: IA4073
-
-**Test Steps:**
-
-1. **Action:** Navigate to the Adactin Hotel App login page  
-   **Expected Result:** The Login page is displayed
-
-2. **Action:** Enter username AutotestB and password IA4073  
-   **Expected Result:** Credentials are entered in the respective fields
-
-3. **Action:** Click the Login button  
-   **Expected Result:** Login is successful
-
-4. **Action:** Verify the browser redirects to the authenticated area  
-   **Expected Result:** Browser has redirected to the authenticated member area
-
-5. **Action:** Verify the URL contains SearchHotel.php  
-   **Expected Result:** The URL displays SearchHotel.php
-
-6. **Action:** Verify the page title and header indicate Search Hotel  
-   **Expected Result:** The page title, URL, and header confirm the user is in the authenticated Search Hotel area
-
----
-
-## Test 6: ILABACCEL-1575 - Error message verification on failed login
-
-**Priority:** Medium
-
-**Preconditions:**
-- Browser is open
-
-**Test Data:**
-- Username: AutotestB
-- Password: WrongPass1
-
-**Test Steps:**
-
-1. **Action:** Navigate to the Adactin Hotel App login page  
-   **Expected Result:** The Login page is displayed
-
-2. **Action:** Enter username AutotestB  
-   **Expected Result:** Username is entered in the field
-
-3. **Action:** Enter password WrongPass1  
-   **Expected Result:** Password is entered in the field
-
-4. **Action:** Click the Login button  
-   **Expected Result:** Login fails
-
-5. **Action:** Observe the error message  
-   **Expected Result:** User remains on the Login page, an appropriate error message is displayed that is user-friendly and indicates invalid login details or password issue
-
----
-
-## Summary
-
-**Total Tests Exported:** 6
-
-All test cases have been successfully extracted from Test Plan ILABACCEL-1576 with their respective steps, preconditions, priorities, and expected results.
