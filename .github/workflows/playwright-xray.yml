@@ -49,7 +49,6 @@ jobs:
       - name: Validate secrets and import to Xray
         if: always()
         run: |
-          set -e
           
           # Validate secrets are not empty
           if [ -z "${{ secrets.XRAY_CLIENT_ID }}" ]; then
@@ -63,6 +62,7 @@ jobs:
           fi
           
           # Authenticate to Xray Cloud
+          echo "Authenticating to Xray Cloud..."
           TOKEN_RESPONSE=$(curl -s -X POST "https://xray.cloud.getxray.app/api/v2/authenticate" \
             -H "Content-Type: application/json" \
             -d "{\"client_id\": \"${{ secrets.XRAY_CLIENT_ID }}\", \"client_secret\": \"${{ secrets.XRAY_CLIENT_SECRET }}\"}")
@@ -76,6 +76,15 @@ jobs:
             exit 1
           fi
           
+          echo "Token obtained successfully"
+          
+          # Check if results file exists
+          if [ ! -f "results/xray-report.xml" ]; then
+            echo "Error: results/xray-report.xml not found"
+            exit 1
+          fi
+          
+          echo "Importing JUnit results to Xray..."
           # Import JUnit results to Xray
           IMPORT_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "https://xray.cloud.getxray.app/api/v2/import/execution/junit?testExecKey=${{ inputs.test_exec_key }}" \
             -H "Authorization: Bearer $TOKEN" \
@@ -85,16 +94,17 @@ jobs:
           HTTP_CODE=$(echo "$IMPORT_RESPONSE" | tail -n1)
           BODY=$(echo "$IMPORT_RESPONSE" | sed '$d')
           
+          echo "HTTP Status: $HTTP_CODE"
+          echo "Response body: $BODY"
+          
           if [ "$HTTP_CODE" != "200" ]; then
             echo "Error: Xray import failed with HTTP $HTTP_CODE"
-            echo "Response: $BODY"
             exit 1
           fi
           
           if echo "$BODY" | grep -qi "error\|errors"; then
             echo "Error: Xray import rejected"
-            echo "Response: $BODY"
             exit 1
           fi
           
-          echo "Import successful: $BODY"
+          echo "Import successful"
