@@ -6,12 +6,14 @@ on:
       test_exec_key:
         description: 'Existing Xray Test Execution Key for project ILABACCEL'
         required: false
-        default: 'ILABACCEL-1577'
+        default: 'ILABACCEL-1587'
 
 jobs:
   playwright:
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    env:
+      CI: 'true'
 
     steps:
       - name: Checkout repository
@@ -20,7 +22,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: '20'
 
       - name: Install dependencies
         run: npm ci
@@ -28,10 +30,8 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install --with-deps
 
-      - name: Run Playwright suite
+      - name: Run full Playwright suite
         run: npx playwright test
-        env:
-          CI: 'true'
 
       - name: Upload HTML report
         if: always()
@@ -51,71 +51,34 @@ jobs:
           if-no-files-found: ignore
           retention-days: 30
 
-      - name: Check Xray secrets
-        id: check-xray
+      - name: Validate Xray secrets
         if: always()
         env:
           XRAY_CLIENT_ID: ${{ secrets.XRAY_CLIENT_ID }}
           XRAY_CLIENT_SECRET: ${{ secrets.XRAY_CLIENT_SECRET }}
         run: |
           set -euo pipefail
-          HAS_XRAY=false
-
-          if [ -n "${XRAY_CLIENT_ID:-}" ] && [ -n "${XRAY_CLIENT_SECRET:-}" ]; then
-            HAS_XRAY=true
-            echo "Found Xray credentials in repository secrets"
-          else
-            echo "Repository secrets missing — attempting fallbacks (.env, .vscode/mcp.json)"
-
-            if [ -f .env ]; then
-              CID=$(grep -E '^XRAY_CLIENT_ID' .env | sed 's/.*=//' | tr -d ' "') || true
-              CSEC=$(grep -E '^XRAY_CLIENT_SECRET' .env | sed 's/.*=//' | tr -d ' "') || true
-              if [ -n "$CID" ] && [ -n "$CSEC" ]; then
-                echo "XRAY_CLIENT_ID=$CID" >> $GITHUB_ENV
-                echo "XRAY_CLIENT_SECRET=$CSEC" >> $GITHUB_ENV
-                XRAY_CLIENT_ID=$CID
-                XRAY_CLIENT_SECRET=$CSEC
-                HAS_XRAY=true
-                echo "Using Xray credentials from .env"
-              fi
-            fi
-
-            if [ "$HAS_XRAY" != "true" ] && [ -f .vscode/mcp.json ]; then
-              if command -v jq >/dev/null 2>&1; then
-                CID=$(jq -r '.xray.XRAY_CLIENT_ID // empty' .vscode/mcp.json) || true
-                CSEC=$(jq -r '.xray.XRAY_CLIENT_SECRET // empty' .vscode/mcp.json) || true
-              else
-                CID=$(grep -o '"XRAY_CLIENT_ID"[[:space:]]*:[[:space:]]*"[^"]\+' .vscode/mcp.json | head -1 | sed 's/.*: *"//' || true
-                CSEC=$(grep -o '"XRAY_CLIENT_SECRET"[[:space:]]*:[[:space:]]*"[^"]\+' .vscode/mcp.json | head -1 | sed 's/.*: *"//' || true
-              fi
-              if [ -n "$CID" ] && [ -n "$CSEC" ]; then
-                echo "XRAY_CLIENT_ID=$CID" >> $GITHUB_ENV
-                echo "XRAY_CLIENT_SECRET=$CSEC" >> $GITHUB_ENV
-                XRAY_CLIENT_ID=$CID
-                XRAY_CLIENT_SECRET=$CSEC
-                HAS_XRAY=true
-                echo "Using Xray credentials from .vscode/mcp.json"
-              fi
-            fi
-          fi
-
-          if [ "$HAS_XRAY" != "true" ]; then
-            echo "Error: XRAY_CLIENT_ID and XRAY_CLIENT_SECRET must be provided via repository secrets or fallback files (.env or .vscode/mcp.json)" >&2
-            echo "has_xray=false" >> $GITHUB_OUTPUT
+          if [ -z "${XRAY_CLIENT_ID:-}" ] || [ -z "${XRAY_CLIENT_SECRET:-}" ]; then
+            echo "Missing required Xray secrets." >&2
             exit 1
           fi
 
-          echo "has_xray=true" >> $GITHUB_OUTPUT
-
-      - name: Import results into existing Xray execution
-        if: steps.check-xray.outputs.has_xray == 'true'
+      - name: Import JUnit report into existing Xray execution
+        if: always()
         env:
-          TEST_EXEC_KEY: ${{ inputs.test_exec_key }}
+          XRAY_CLIENT_ID: ${{ secrets.XRAY_CLIENT_ID }}
+          XRAY_CLIENT_SECRET: ${{ secrets.XRAY_CLIENT_SECRET }}
+          TEST_EXEC_KEY: ${{ github.event.inputs.test_exec_key || 'ILABACCEL-1587' }}
         run: |
           set -euo pipefail
 
+          if [ -z "${XRAY_CLIENT_ID:-}" ] || [ -z "${XRAY_CLIENT_SECRET:-}" ]; then
+            echo "Missing required Xray secrets." >&2
+            exit 1
+          fi
+
           if [ ! -f "results/xray-report.xml" ]; then
-            echo "Error: results/xray-report.xml not found." >&2
+            echo "results/xray-report.xml not found." >&2
             exit 1
           fi
 
@@ -125,28 +88,28 @@ jobs:
             --data "{\"client_id\":\"${XRAY_CLIENT_ID}\",\"client_secret\":\"${XRAY_CLIENT_SECRET}\"}")
 
           if [ "${AUTH_STATUS}" != "200" ]; then
-            echo "Error: Xray authentication failed." >&2
+            echo "Xray authentication failed." >&2
             exit 1
           fi
 
-          TOKEN=$(tr -d '"' < /tmp/xray-auth.json | tr -d '\n')
+          TOKEN=$(tr -d '\r\n"' < /tmp/xray-auth.json)
           if [ -z "${TOKEN}" ]; then
-            echo "Error: Xray authentication token missing." >&2
+            echo "Xray token missing after authentication." >&2
             exit 1
           fi
 
-          IMPORT_STATUS=$(curl -sS -o /tmp/xray-import-response.txt -w '%{http_code}' \
+          IMPORT_STATUS=$(curl -sS -o /tmp/xray-import-response.json -w '%{http_code}' \
             -X POST "https://xray.cloud.getxray.app/api/v2/import/execution/junit?testExecKey=${TEST_EXEC_KEY}" \
             -H "Authorization: Bearer ${TOKEN}" \
             -H "Content-Type: application/xml" \
             --data-binary "@results/xray-report.xml")
 
-          if [ "${IMPORT_STATUS}" != "200" ]; then
-            echo "Error: Xray import failed or was rejected." >&2
+          if [ "${IMPORT_STATUS}" != "200" ] && [ "${IMPORT_STATUS}" != "201" ]; then
+            echo "Xray import rejected or failed." >&2
             exit 1
           fi
 
-          if grep -Eiq 'error|errors' /tmp/xray-import-response.txt; then
-            echo "Error: Xray import rejected." >&2
+          if grep -Eiq 'error|rejected|not found|unauthorized' /tmp/xray-import-response.json; then
+            echo "Xray import response indicates rejection." >&2
             exit 1
           fi
