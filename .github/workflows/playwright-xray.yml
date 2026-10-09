@@ -78,17 +78,27 @@ jobs:
           
           echo "Token obtained successfully"
           
-          # Check if results file exists
+          # Check if results file exists and has content
           if [ ! -f "results/xray-report.xml" ]; then
             echo "Error: results/xray-report.xml not found"
             exit 1
           fi
           
+          FILE_SIZE=$(wc -c < results/xray-report.xml)
+          echo "File size: $FILE_SIZE bytes"
+          
+          if [ "$FILE_SIZE" -lt 100 ]; then
+            echo "Error: results/xray-report.xml is too small or empty"
+            cat results/xray-report.xml
+            exit 1
+          fi
+          
           echo "Importing JUnit results to Xray..."
-          # Import JUnit results to Xray
-          IMPORT_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "https://xray.cloud.getxray.app/api/v2/import/execution/junit?testExecKey=${{ inputs.test_exec_key }}" \
+          # Import JUnit results to Xray - use proper file attachment
+          IMPORT_RESPONSE=$(curl -s -w "\n%{http_code}" \
+            -X POST "https://xray.cloud.getxray.app/api/v2/import/execution/junit?testExecKey=${{ inputs.test_exec_key }}" \
             -H "Authorization: Bearer $TOKEN" \
-            -F "file=@results/xray-report.xml")
+            --form "file=@results/xray-report.xml")
           
           # Extract HTTP status code
           HTTP_CODE=$(echo "$IMPORT_RESPONSE" | tail -n1)
