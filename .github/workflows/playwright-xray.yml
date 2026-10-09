@@ -51,35 +51,29 @@ jobs:
           if-no-files-found: ignore
           retention-days: 30
 
-      - name: Validate Xray secrets
+      - name: Check Xray secrets
+        id: check-xray
         if: always()
         env:
           XRAY_CLIENT_ID: ${{ secrets.XRAY_CLIENT_ID }}
           XRAY_CLIENT_SECRET: ${{ secrets.XRAY_CLIENT_SECRET }}
         run: |
-          set -euo pipefail
-          if [ -z "${XRAY_CLIENT_ID}" ]; then
-            echo "Error: XRAY_CLIENT_ID secret is empty." >&2
-            exit 1
-          fi
-          if [ -z "${XRAY_CLIENT_SECRET}" ]; then
-            echo "Error: XRAY_CLIENT_SECRET secret is empty." >&2
-            exit 1
+          # Determine if both Xray secrets are available and expose as output
+          if [ -z "${XRAY_CLIENT_ID}" ] || [ -z "${XRAY_CLIENT_SECRET}" ]; then
+            echo "has_xray=false" >> $GITHUB_OUTPUT
+            echo "Skipping Xray import: XRAY_CLIENT_ID or XRAY_CLIENT_SECRET is missing"
+          else
+            echo "has_xray=true" >> $GITHUB_OUTPUT
           fi
 
       - name: Import results into existing Xray execution
-        if: always()
+        if: steps.check-xray.outputs.has_xray == 'true'
         env:
           XRAY_CLIENT_ID: ${{ secrets.XRAY_CLIENT_ID }}
           XRAY_CLIENT_SECRET: ${{ secrets.XRAY_CLIENT_SECRET }}
           TEST_EXEC_KEY: ${{ inputs.test_exec_key }}
         run: |
           set -euo pipefail
-
-          if [ -z "${XRAY_CLIENT_ID}" ] || [ -z "${XRAY_CLIENT_SECRET}" ]; then
-            echo "Error: XRAY_CLIENT_ID and XRAY_CLIENT_SECRET must both be set." >&2
-            exit 1
-          fi
 
           if [ ! -f "results/xray-report.xml" ]; then
             echo "Error: results/xray-report.xml not found." >&2
