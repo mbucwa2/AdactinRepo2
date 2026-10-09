@@ -1,0 +1,27 @@
+# Playwright
+node_modules/
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+/playwright/.auth/
+results/
+
+# Environment and secrets
+.env
+.env.*
+**/.env
+**/.env.*
+**/*.env
+*.pem
+*.key
+*.crt
+*.cer
+*.p12
+*.pfx
+*credentials*
+**/credentials/**
+
+# Local editor/system noise
+.DS_Store
+.env

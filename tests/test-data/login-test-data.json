@@ -1,0 +1,54 @@
+{
+  "baseUrl": "https://adactinhotelapp.com/",
+  "scenarios": {
+    "validLogin": {
+      "testId": "ILABACCEL-1559",
+      "username": "AutotestB",
+      "password": "IA4073",
+      "expectedError": null,
+      "expectedPage": "search hotel"
+    },
+    "invalidUsername": {
+      "testId": "ILABACCEL-1560",
+      "username": "InvalidUser999",
+      "password": "IA4073",
+      "expectedError": "invalid login details",
+      "expectedPage": "login"
+    },
+    "invalidPassword": {
+      "testId": "ILABACCEL-1561",
+      "username": "AutotestB",
+      "password": "WrongPassword123",
+      "expectedError": "invalid login details",
+      "expectedPage": "login"
+    },
+    "emptyFields": {
+      "testId": "ILABACCEL-1562",
+      "username": "",
+      "password": "",
+      "secondaryUsername": "AutotestB",
+      "secondaryPassword": "",
+      "thirdUsername": "",
+      "thirdPassword": "IA4073",
+      "expectedMessages": [
+        "username",
+        "password"
+      ],
+      "expectedPage": "login"
+    },
+    "dashboardAfterLogin": {
+      "testId": "ILABACCEL-1563",
+      "username": "AutotestB",
+      "password": "IA4073",
+      "expectedError": null,
+      "expectedPage": "search hotel"
+    },
+    "failedLogin": {
+      "testId": "ILABACCEL-1564",
+      "username": "wronguser",
+      "password": "wrongpass",
+      "expectedError": "invalid login details",
+      "expectedPage": "login"
+    }
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "servers": {
+
+      "xray": {
+      "command": "npx",
+      "args": ["xray-mcp@latest"],
+      "env": {
+        "XRAY_CLIENT_ID": "B66B94D1D96640B7B139D6680C0A6633",
+        "XRAY_CLIENT_SECRET": "4fd7a758367981828a87d02b95a6ac1e956bfee4129ff826f9a0214861bb8b9b"
+      }
+    },
+    "zephyr-server2": {
+      "command": "npx",
+      "args": ["zephyr-scale-mcp-server@latest"],
+      "env": {
+        "ZEPHYR_BASE_URL": "https://ilabquality-team.atlassian.net",
+        "ZEPHYR_API_KEY": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJjb250ZXh0Ijp7ImJhc2VVcmwiOiJodHRwczovL2lsYWJxdWFsaXR5LXRlYW0uYXRsYXNzaWFuLm5ldCIsInVzZXIiOnsiYWNjb3VudElkIjoiNzEyMDIwOmVkMTg4MjRlLWJmMTUtNDNlZi05MTFkLWIwMTUwNzMwOTg4OSIsInRva2VuSWQiOiI4ZjZiMWU1Zi0zOTc5LTRlNGItOTI2Ni1lMTc3NTVlM2Q3MDMifSwiZW52aXJvbm1lbnRJZCI6IjJiYWFlYjY5LTE1YWMtNDk1NS04ZWI2LWUzNDZhYTE1NjdhYSJ9LCJpc3MiOiJjb20ua2Fub2FoLnRlc3QtbWFuYWdlciIsInN1YiI6IkZPUkdFLTg2ZDcxMGIyLThhNjQtNGMxNy1hZDliLWZkYzdlMGVkOGQyNiIsImV4cCI6MTgyMjg5OTMzNSwiaWF0IjoxNzkxMzYzMzM1fQ.FkmZO7qKDRbcMdt-DCOhqJc7AcU6bDIP1MIjnlMxQ_c",
+        "JIRA_USERNAME": "bonginhlanhla.lushaba@ilabquality.com",
+        "JIRA_API_TOKEN": "ATATT3xFfGF0yRF2X3wIl2yZ5iFKQ-5qDu3ERqcDM6sYaPLAoLaO0yjzbLdFH-mxAl3bduL0avAAvj8OM2O29IeTAiqmsVrgUGDTKFWJiJ5K8PjsrS-d-eTqHTe4gjw5oE5n8dQ6gmd_xxXjbRlv-rKu3HyTd8HPDVgY7jEVbyce_7t7eIvpJoU=DF0A2592"
+      }
+    },
+    "playwright-test": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "playwright",
+        "run-test-mcp-server"
+      ]
+    }
+  },
+  "inputs": []
+}
