@@ -94,11 +94,12 @@ jobs:
           fi
           
           echo "Importing JUnit results to Xray..."
-          # Import JUnit results to Xray - use proper file attachment
+          # Import JUnit results to Xray - send as raw file data
           IMPORT_RESPONSE=$(curl -s -w "\n%{http_code}" \
             -X POST "https://xray.cloud.getxray.app/api/v2/import/execution/junit?testExecKey=${{ inputs.test_exec_key }}" \
             -H "Authorization: Bearer $TOKEN" \
-            --form "file=@results/xray-report.xml")
+            -H "Content-Type: application/xml" \
+            --data-binary "@results/xray-report.xml")
           
           # Extract HTTP status code
           HTTP_CODE=$(echo "$IMPORT_RESPONSE" | tail -n1)
