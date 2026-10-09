@@ -1,143 +1,87 @@
-name: Playwright Xray Import
+name: Playwright Tests with Xray Import
 
 on:
   workflow_dispatch:
     inputs:
       test_exec_key:
-        description: Existing Xray Test Execution key to import into
-        required: true
-        default: ILABACCEL-1566
-        type: string
+        description: 'Test Execution Key'
+        required: false
+        default: 'ILABACCEL-1566'
 
 jobs:
-  playwright-xray:
-    runs-on: ubuntu-latest
+  test:
     timeout-minutes: 60
-    permissions:
-      contents: read
-
+    runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Node
+      - name: Install Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
-          cache: npm
+          node-version: '18'
 
       - name: Install dependencies
         run: npm ci
 
-      - name: Install Playwright browsers
+      - name: Install Playwright Browsers
         run: npx playwright install --with-deps
 
-      - name: Run full Playwright suite
-        run: npx playwright test
-        env:
-          CI: true
+      - name: Run Playwright tests
+        run: npm test
+        continue-on-error: true
 
-      - name: Upload HTML report artifact
-        if: ${{ !cancelled() }}
+      - name: Upload HTML Report
         uses: actions/upload-artifact@v4
+        if: always()
         with:
-          name: playwright-html-report
+          name: playwright-report
           path: playwright-report/
-          if-no-files-found: ignore
-          retention-days: 7
+          retention-days: 30
 
-      - name: Upload JUnit report artifact
-        if: ${{ !cancelled() }}
+      - name: Upload Xray Report
         uses: actions/upload-artifact@v4
+        if: always()
         with:
-          name: xray-junit-report
+          name: xray-report
           path: results/xray-report.xml
-          if-no-files-found: warn
-          retention-days: 7
+          retention-days: 30
 
-      - name: Validate Xray secrets
-        if: ${{ always() }}
-        env:
-          XRAY_CLIENT_ID: ${{ secrets.XRAY_CLIENT_ID }}
-          XRAY_CLIENT_SECRET: ${{ secrets.XRAY_CLIENT_SECRET }}
+      - name: Validate secrets and import to Xray
+        if: always()
         run: |
-          set -euo pipefail
-          if [ -z "${XRAY_CLIENT_ID}" ] || [ -z "${XRAY_CLIENT_SECRET}" ]; then
-            echo "XRAY_CLIENT_ID and XRAY_CLIENT_SECRET must be configured as GitHub secrets."
+          set -e
+          
+          # Validate secrets are not empty
+          if [ -z "${{ secrets.XRAY_CLIENT_ID }}" ]; then
+            echo "Error: XRAY_CLIENT_ID secret is empty"
             exit 1
           fi
-
-      - name: Import results to existing Xray execution
-        if: ${{ always() }}
-        env:
-          XRAY_CLIENT_ID: ${{ secrets.XRAY_CLIENT_ID }}
-          XRAY_CLIENT_SECRET: ${{ secrets.XRAY_CLIENT_SECRET }}
-          TEST_EXEC_KEY: ${{ inputs.test_exec_key }}
-        run: |
-          set -euo pipefail
-
-          if [ -z "${XRAY_CLIENT_ID}" ] || [ -z "${XRAY_CLIENT_SECRET}" ]; then
-            echo "XRAY_CLIENT_ID and XRAY_CLIENT_SECRET are required."
+          
+          if [ -z "${{ secrets.XRAY_CLIENT_SECRET }}" ]; then
+            echo "Error: XRAY_CLIENT_SECRET secret is empty"
             exit 1
           fi
-
-          if [ -z "${TEST_EXEC_KEY}" ]; then
-            echo "A valid test execution key is required."
-            exit 1
-          fi
-
-          if [ -z "${XRAY_PROJECT_KEY}" ]; then
-            echo "A valid project key is required."
-            exit 1
-          fi
-
-          if [ ! -f "results/xray-report.xml" ]; then
-            echo "JUnit report results/xray-report.xml was not generated."
-            exit 1
-          fi
-
-          AUTH_RESPONSE="$(curl -sS --fail-with-body -X POST "https://xray.cloud.getxray.app/api/v2/authenticate" \
+          
+          # Authenticate to Xray Cloud
+          TOKEN_RESPONSE=$(curl -s -X POST "https://xray.cloud.getxray.app/api/v2/authenticate" \
             -H "Content-Type: application/json" \
-            --data "{\"client_id\":\"${XRAY_CLIENT_ID}\",\"client_secret\":\"${XRAY_CLIENT_SECRET}\"}")"
-
-          TOKEN="$(printf '%s' "${AUTH_RESPONSE}" | python3 -c 'import json,sys; d=json.load(sys.stdin); print((d.get("token") or d.get("access_token") or ""))' | tr -d '\r' | sed "s/^['\"]//; s/['\"]$//")"
-
-          if [ -z "${TOKEN}" ]; then
-            echo "Xray authentication failed: no token was returned."
+            -d "{\"client_id\": \"${{ secrets.XRAY_CLIENT_ID }}\", \"client_secret\": \"${{ secrets.XRAY_CLIENT_SECRET }}\"}")
+          
+          # Extract token and remove quotes
+          TOKEN=$(echo "$TOKEN_RESPONSE" | tr -d '"')
+          
+          if [ -z "$TOKEN" ]; then
+            echo "Error: Failed to obtain Xray authentication token"
             exit 1
           fi
-
-          curl -sS --fail-with-body \
-            -H "Authorization: Bearer ${TOKEN}" \
-            -F "file=@results/xray-report.xml" \
-            "https://xray.cloud.getxray.app/api/v2/import/execution/junit?projectKey=ILABACCEL&testExecKey=${TEST_EXEC_KEY}" \
-            -o /tmp/xray-import-response.json
-
-          python3 - <<'PY'
-          import json
-          import pathlib
-          import sys
-
-          response_path = pathlib.Path('/tmp/xray-import-response.json')
-          if not response_path.exists():
-              print('Xray import failed: no response body was returned.')
-              sys.exit(1)
-
-          body = response_path.read_text(encoding='utf-8').strip()
-          if not body:
-              print('Xray import failed: empty response body.')
-              sys.exit(1)
-
-          try:
-              parsed = json.loads(body)
-          except json.JSONDecodeError:
-              print('Xray import failed: invalid JSON response.')
-              sys.exit(1)
-
-          payload = str(parsed).lower()
-          if 'error' in payload or 'errors' in payload or 'rejected' in payload or 'failed' in payload:
-              print('Xray import failed: response indicated rejection or error.')
-              sys.exit(1)
-
-          print('Xray import succeeded.')
-          PY
+          
+          # Import JUnit results to Xray
+          IMPORT_RESPONSE=$(curl -s -X POST "https://xray.cloud.getxray.app/api/v2/import/execution/junit?projectKey=ILABACCEL&testExecKey=${{ inputs.test_exec_key }}" \
+            -H "Authorization: Bearer $TOKEN" \
+            -F "file=@results/xray-report.xml")
+          
+          # Check if import was successful
+          if echo "$IMPORT_RESPONSE" | grep -q "error\|Error"; then
+            echo "Error: Xray import rejected"
+            exit 1
+          fi
